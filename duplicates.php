@@ -1,49 +1,88 @@
 <?php
-$path = 'd:\44\test';
+
+echo "Input path: ";
+$path = trim(fgets(STDIN));
+if(!is_dir($path)){
+    exit('Error: '.$path . ' is not a directory. '. PHP_EOL . 'Exit' . PHP_EOL);
+}
+
 $files = new \Duplicates($path);
 $files->findDuplicates();
 
 class Duplicates{
-
     private $path;
+    private $resultFileName;
+    private $processUnixHiddenFiles;
     private $files = array();
-    private $sizes = array();
 
-    public function __construct($path){
+    public function __construct($path, $resultFileName = 'duplicates.txt', $processUnixHiddenFiles = false){
         $this->path = $path;
+        $this->resultFileName = $resultFileName;
+        $this->processUnixHiddenFiles = $processUnixHiddenFiles;
     }
 
-    private function getFile($path){
+    public function findDuplicates(){
+        $this->processPath($this->path);
+        $this->outputResult();
+    }
+    // private
+    private function processPath($path){
         if ($handle = @opendir($path)) {
             while(($file = readdir($handle))) {
                 if($file == '.' || $file == '..'){
                     continue;
                 }
-                $name = $path . DIRECTORY_SEPARATOR . $file;
-                if(is_file($name)){
-                    $this->processFile($name);
+                if($file[0] == '.' && !$this->processUnixHiddenFiles){
+                    continue;
+                }
+                $filename = $path . DIRECTORY_SEPARATOR . $file;
+                if(is_file($filename)){
+                    $this->processFile($filename);
                 }else{
-                    $this->getFile($name);
+                    $this->processPath($filename);
                 }
             }
             closedir($handle);
         }else{
-            die("Cann't open dir: ".$path.PHP_EOL);
+            echo("Cannot open dir: ".$path.PHP_EOL);
         }
     }
 
     private function processFile($path){
         echo 'Process '.$path . PHP_EOL;
-        $encode = md5_file($path);
+        $encode = $this->getFileHash($path);
         $this->files[$encode][] = $path;
     }
 
-    public function findDuplicates(){
-        $this->getFile($this->path);
-        print_r($this->files);
+    private function getFileHash($path){
+        return md5_file($path);
     }
 
+    private function outputResult(){
+        $foundFiles = $this->files;
+        foreach($foundFiles as $hash => &$files){
+            if(count($files) == 1){
+                unset($foundFiles[$hash]);
+            }
+        }unset($hash, $files);
+
+        $resultFileName = $this->resultFileName;
+        $result = array();
+        $i = 0;
+        $countFound = 0;
+        foreach($foundFiles as $hash => $files){
+            $result[] = (++$i) . PHP_EOL;
+            $result[] = implode(PHP_EOL, $files).PHP_EOL;
+            $countFound += count($files);
+        }unset($hash, $files, $foundFiles);
+
+        echo 'Done. Found '.$countFound.' duplicates.'.PHP_EOL;
+
+        if(file_put_contents($resultFileName, $result)){
+            echo 'Result successfully written to file ' . __DIR__ . DIRECTORY_SEPARATOR . $resultFileName . PHP_EOL;
+        }else{
+            echo 'Error while writing in file ' . __DIR__ . DIRECTORY_SEPARATOR . $resultFileName . PHP_EOL;
+        }
+    }
 }
-
-
 
