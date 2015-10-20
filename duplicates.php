@@ -9,16 +9,17 @@ if(!is_dir($path)){
 $files = new \Duplicates($path);
 $files->findDuplicates();
 
+
 class Duplicates{
     private $path;
     private $resultFileName;
     private $processUnixHiddenFiles;
     private $files = array();
 
-    public function __construct($path, $resultFileName = 'duplicates.txt', $processUnixHiddenFiles = false){
+    public function __construct($path, $processUnixHiddenFiles = false, $resultFileName = 'duplicates.txt'){
         $this->path = $path;
-        $this->resultFileName = $resultFileName;
         $this->processUnixHiddenFiles = $processUnixHiddenFiles;
+        $this->resultFileName = $resultFileName;
     }
 
     public function findDuplicates(){
